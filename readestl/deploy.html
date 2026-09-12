@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Readest Lite 部署教程</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; background: #1a1a2e; color: #e0e0e0; line-height: 1.8; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #6c5ce7; text-align: center; margin: 40px 0; }
+        h2 { color: #00b894; margin: 30px 0 15px; border-bottom: 1px solid #2d3436; padding-bottom: 10px; }
+        h3 { color: #e17055; margin: 20px 0 10px; }
+        p { margin: 10px 0; }
+        code { background: #0d1117; color: #7ee787; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+        pre { background: #0d1117; color: #7ee787; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+        pre code { background: none; padding: 0; }
+        .nodebyte-banner { background: linear-gradient(135deg, #e17055, #fdcb6e); border-radius: 15px; padding: 20px; text-align: center; margin: 20px 0; }
+        .nodebyte-banner a { color: #fff; font-weight: bold; font-size: 1.2em; text-decoration: none; }
+        .warning { background: #2d1b1b; border: 1px solid #e17055; border-radius: 8px; padding: 15px; margin: 15px 0; }
+        .warning strong { color: #e17055; }
+        .tip { background: #1b2d1b; border: 1px solid #00b894; border-radius: 8px; padding: 15px; margin: 15px 0; }
+        .tip strong { color: #00b894; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #2d3436; padding: 8px 12px; text-align: left; }
+        th { background: #16213e; color: #6c5ce7; }
+        a { color: #6c5ce7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nodebyte-banner">
+            <a href="https://nodebyte.cn">💬 NodeByte 社区 — 问题反馈请优先前往</a>
+        </div>
+        <h1>Readest Lite 部署教程</h1>
+
+        <h2>1. Docker 快速部署（推荐）</h2>
+        <pre><code>docker run -d \
+  --name readest-lite \
+  -p 8225:8225 \
+  -v readest-data:/data \
+  -e ADMIN_EMAIL=admin@example.com \
+  -e ADMIN_PASSWORD=changeme \
+  -e SUPER_ADMIN_EMAIL=admin@example.com \
+  --restart unless-stopped \
+  ghcr.io/cshdotcom/readest-lite:latest</code></pre>
+        <div class="tip"><strong>💡 提示：</strong>设 <code>SUPER_ADMIN_EMAIL</code> 与 <code>ADMIN_EMAIL</code> 相同即可获得超级管理员角色（可创建/管理 admin），重启容器后自动生效。</div>
+
+        <h2>2. Docker Compose 部署</h2>
+        <h3>2.1 创建 .env 文件</h3>
+        <pre><code>ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=changeme
+SUPER_ADMIN_EMAIL=admin@example.com
+PORT=8225</code></pre>
+        <h3>2.2 docker-compose.yml</h3>
+        <pre><code>services:
+  readest-lite:
+    image: ghcr.io/cshdotcom/readest-lite:latest
+    container_name: readest-lite
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8225}:8225"
+    volumes:
+      - ./data:/data
+    env_file:
+      - .env</code></pre>
+        <h3>2.3 启动</h3>
+        <pre><code>docker compose up -d</code></pre>
+
+        <h2>3. 环境变量</h2>
+        <table>
+            <tr><th>变量</th><th>必填</th><th>默认</th><th>说明</th></tr>
+            <tr><td><code>ADMIN_EMAIL</code></td><td>✅</td><td>—</td><td>管理员邮箱</td></tr>
+            <tr><td><code>ADMIN_PASSWORD</code></td><td>✅</td><td>—</td><td>管理员密码</td></tr>
+            <tr><td><code>SUPER_ADMIN_EMAIL</code></td><td>可选</td><td>—</td><td><strong>设为与 ADMIN_EMAIL 相同的值</strong>即可获得 super_admin 角色</td></tr>
+            <tr><td><code>ADMIN_USERNAME</code></td><td>可选</td><td>—</td><td>管理员显示名</td></tr>
+            <tr><td><code>ADMIN_AVATAR_URL</code></td><td>可选</td><td>—</td><td>管理员头像 URL</td></tr>
+            <tr><td><code>PORT</code></td><td>可选</td><td>8225</td><td>监听端口</td></tr>
+            <tr><td><code>JWT_SECRET</code></td><td>可选</td><td>派生值</td><td>JWT 签名密钥</td></tr>
+            <tr><td><code>PUBLIC_BASE_URL</code></td><td>可选</td><td>—</td><td>反向代理场景下必填（如 https://read.yourdomain.com）</td></tr>
+            <tr><td><code>RECYCLE_BIN_EXPIRE_DAYS</code></td><td>可选</td><td>30</td><td>回收站过期天数</td></tr>
+            <tr><td><code>DEEPL_ENABLED</code></td><td>可选</td><td>false</td><td>启用 DeepL 翻译</td></tr>
+            <tr><td><code>AI_GATEWAY_API_KEY</code></td><td>可选</td><td>—</td><td>AI 聊天网关</td></tr>
+        </table>
+
+        <h2>4. 反向代理（Nginx）</h2>
+        <pre><code>server {
+    listen 443 ssl;
+    server_name read.yourdomain.com;
+
+    # SSL 证书
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8225;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # 文件上传大小限制
+        client_max_body_size 100m;
+    }
+}</code></pre>
+        <div class="warning"><strong>⚠️ 重要：</strong>反向代理场景下必须设置 <code>PUBLIC_BASE_URL</code> 环境变量为你的外部域名（如 <code>https://read.yourdomain.com</code>），否则签名 URL 会指向 localhost 导致上传/下载失败。</div>
+
+        <h2>5. 升级</h2>
+        <pre><code>docker pull ghcr.io/cshdotcom/readest-lite:latest
+docker compose down && docker compose up -d</code></pre>
+        <div class="tip"><strong>💡 升级后：</strong>浏览器硬刷新（Ctrl+Shift+R）清掉旧的 Service Worker 缓存。</div>
+
+        <h2>6. 数据备份</h2>
+        <p>所有数据存储在 <code>/data</code> 目录：</p>
+        <pre><code>data/
+├── db/             SQLite 数据库
+├── books/          书籍文件
+├── avatars/        用户头像
+├── inbox/          Send to Readest 入站文件
+└── config.json     运行时配置</code></pre>
+        <p>备份只需复制整个 <code>data/</code> 目录即可。</p>
+
+        <div class="nodebyte-banner">
+            <a href="https://nodebyte.cn">💬 有问题？前往 NodeByte 社区讨论</a>
+        </div>
+    </div>
+</body>
+</html>
